@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import com.common.apiutil.CommonException;
 import com.common.apiutil.moneybox.MoneyBox;
@@ -30,12 +31,22 @@ public class MainActivity extends AppCompatActivity {
 
     MoneyBox moneyBox;
     RS232Reader rs232Reader;
+    TextView printerTV;
+    UsbThermalPrinter printer=new UsbThermalPrinter(this);
 
 
-    void doPrint1() throws CommonException {
-        UsbThermalPrinter printer=new UsbThermalPrinter(this);
+
+    void doPrintByUsbSerialPrinter() throws CommonException {
+
         printer.EscPosCommandExe(new byte[]{0x1b,0x40});
-        byte resul= printer.EscPosCommandExe(new byte[]{0x10,4,1});
+
+
+       dleEot1(printer, (byte) 1);
+        dleEot1(printer, (byte) 2);
+        dleEot1(printer, (byte) 3);
+        dleEot1(printer, (byte) 4);
+
+
 
 
         int rep=10;
@@ -76,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    void doPrint() {
+    void doPrintRawUsbSerial() {
         UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         ProbeTable customTable = new ProbeTable();
@@ -102,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
         try {
             int rep=10;
             port.open(connection);
-            //   port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
 
 
             byte[] cmd= new byte[3];
@@ -110,16 +120,18 @@ public class MainActivity extends AppCompatActivity {
             cmd[1]=0x40;
             port.write(cmd, 1000);
 
-
-            port.write("-\n".getBytes(), 1000);
-
-            dle_eot(port,1);
-            port.write("-\n".getBytes(), 1000);
-            dle_eot(port,2);
-            port.write("-\n".getBytes(), 1000);
-            dle_eot(port,3);
-            port.write("-\n".getBytes(), 1000);
-            dle_eot(port,4);
+            /*
+                 write something before asking the status otherwise we won't get any response
+             */
+            port.write("------\n".getBytes(), 1000);
+            dleEot(port,1);
+            /*
+                 this time we will have reading timeout
+             */
+            dleEot(port,2);
+            port.write("------\n".getBytes(), 1000);
+            dleEot(port,3);
+            dleEot(port,4);
 
 
 
@@ -182,6 +194,8 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            connection.close();
         }
 
     }
@@ -226,14 +240,23 @@ public class MainActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                try {
+                printerTV.setText("");
 
-                    doPrint1();
-                } catch (CommonException e) {
-                    e.printStackTrace();
-                }
 
-                 doPrint();
+                    Thread thread= new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                doPrintRawUsbSerial();
+                                doPrintByUsbSerialPrinter();
+
+                            } catch (CommonException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                    thread.start();
+
             }
         });
 
@@ -254,6 +277,9 @@ public class MainActivity extends AppCompatActivity {
                 sendSerial();
             }
         });
+
+
+        printerTV= findViewById(R.id.textViewPrinter);
 
 //        UsbManager manager = (UsbManager) getSystemService(USB_SERVICE);
 //
@@ -288,8 +314,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    void dleEot1(UsbThermalPrinter printer,byte n) throws CommonException {
+        int ret= printer.EscPosCommandExe(new byte[]{0x10,4,n});
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                printerTV.setText(printerTV.getText().toString() + "\n" + "DLE EOT "+n+ ": 0X"+Integer.toHexString(ret));
+            }
+        });
+    }
 
-    void dle_eot(UsbSerialPort port, int n) throws IOException {
+    void dleEot(UsbSerialPort port, int n) throws IOException {
         byte[] cmd = new byte[3];
         cmd[0] = 16;
         cmd[1] = 04;
@@ -300,12 +335,26 @@ public class MainActivity extends AppCompatActivity {
         byte[] response = new byte[1];
         response[0]= (byte) 0xee;
 
-        int retLen = port.read(response, 500);
+        int retLen = port.read(response, 1000);
 
 
-        if (retLen >= 1)
+        if (retLen >= 1) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n" + "DLE EOT "+n+ ": 0X"+Integer.toHexString(response[0]));
+                }
+            });
             Log.d("", Integer.toHexString(response[0]));
+        }
         else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n"+ "DLE EOT "+n+ ":" + "NO Answer ");
+                }
+            });
+
             Log.d("", "NO Answer "+Integer.toHexString(response[0]));
 
         }

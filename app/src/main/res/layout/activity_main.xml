@@ -10,11 +10,10 @@
         android:id="@+id/print_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="48dp"
-        android:layout_marginTop="260dp"
+        android:layout_marginTop="20dp"
         android:text="print"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toStartOf="@+id/serial_button"
+        app:layout_constraintTop_toBottomOf="@+id/textView" />
 
     <Button
         android:id="@+id/serial_button"
@@ -30,19 +29,28 @@
         android:id="@+id/money_box_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="216dp"
-        android:layout_marginTop="260dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="40dp"
         android:text="money box"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toStartOf="@+id/print_button"
+        app:layout_constraintTop_toBottomOf="@+id/textViewPrinter" />
 
     <TextView
         android:id="@+id/textView"
         android:layout_width="296dp"
         android:layout_height="157dp"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="88dp"
+        android:layout_marginTop="28dp"
         android:text="TextView"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toStartOf="@+id/serial_button"
+        app:layout_constraintTop_toBottomOf="@+id/serial_button" />
+
+    <TextView
+        android:id="@+id/textViewPrinter"
+        android:layout_width="336dp"
+        android:layout_height="185dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="@+id/print_button"
+        app:layout_constraintTop_toBottomOf="@+id/print_button" />
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>
