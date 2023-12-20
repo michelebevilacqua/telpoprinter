@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
             cmd[0]=27;
             cmd[1]=33;
             cmd[2]=16;
-
+            port.write(cmd, 1000);
 
 
             for (int i=0;i<rep;i++) {
