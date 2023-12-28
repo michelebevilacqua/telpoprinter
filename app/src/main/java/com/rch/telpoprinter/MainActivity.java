@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -15,12 +16,14 @@ import android.widget.TextView;
 import com.common.apiutil.CommonException;
 import com.common.apiutil.moneybox.MoneyBox;
 import com.common.apiutil.pos.RS232Reader;
+import com.common.apiutil.powercontrol.PowerControl;
 import com.common.apiutil.printer.UsbThermalPrinter;
 import com.hoho.android.usbserial.driver.ChromeCcdSerialDriver;
 import com.hoho.android.usbserial.driver.ProbeTable;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -32,13 +35,14 @@ public class MainActivity extends AppCompatActivity {
     MoneyBox moneyBox;
     RS232Reader rs232Reader;
     TextView printerTV;
+    TextView dsTV;
     UsbThermalPrinter printer=new UsbThermalPrinter(this);
 
+    static final int BOLD=8;
 
 
     void doPrintByUsbSerialPrinter() throws CommonException {
-
-        printer.EscPosCommandExe(new byte[]{0x1b,0x40});
+      printer.EscPosCommandExe(new byte[]{0x1b,0x40});
 
 
        dleEot1(printer, (byte) 1);
@@ -53,15 +57,20 @@ public class MainActivity extends AppCompatActivity {
         byte[] cmd= new byte[3];
         cmd[0]=27;
         cmd[1]=33;
-        cmd[2]=16;
+        cmd[2]=16+BOLD;
 
         printer.EscPosCommandExe(cmd);
 
         for (int i=0;i<rep;i++) {
-            printer.EscPosCommandExe("double H\n".getBytes());
+                printer.EscPosCommandExe("double H\n".getBytes());
+
         }
 
-        cmd[2]=32;
+
+
+
+
+        cmd[2]=32+BOLD;
 
         printer.EscPosCommandExe(cmd);
 
@@ -69,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
             printer.EscPosCommandExe("double W\n".getBytes());
         }
 
-        cmd[2]=32+16;
+        cmd[2]=32+16+BOLD;
 
         printer.EscPosCommandExe(cmd);
 
@@ -77,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
             printer.EscPosCommandExe("double WH\n".getBytes());
         }
 
-        cmd[2]=0;
+        cmd[2]=BOLD;
 
         printer.EscPosCommandExe(cmd);
 
@@ -85,13 +94,20 @@ public class MainActivity extends AppCompatActivity {
             printer.EscPosCommandExe("normal\n".getBytes());
         }
 
+        //CUT  !!!!!!!! Non fa niente
+        printer.EscPosCommandExe(new byte[]{29,86,1});
+
+
     }
 
-    void doPrintRawUsbSerial() {
+    void doPrintRawUsbSerial() throws CommonException {
+
+ //       printer.EscPosCommandExe(new byte[]{0x1b,0x40});
         UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
         ProbeTable customTable = new ProbeTable();
         customTable.addProduct(0x28e9, 0x28d, ChromeCcdSerialDriver.class);
+     //   customTable.addProduct(0x154f, 0x154f, ChromeCcdSerialDriver.class);
      //   customTable.addProduct(0x1fc9, 0x2016, ChromeCcdSerialDriver.class);
 
 
@@ -115,23 +131,29 @@ public class MainActivity extends AppCompatActivity {
             port.open(connection);
 
 
-            byte[] cmd= new byte[3];
+            // initialize printer ESC @
+            byte[] cmd= new byte[2];
             cmd[0]=0x1b;
             cmd[1]=0x40;
             port.write(cmd, 1000);
 
-            /*
-                 write something before asking the status otherwise we won't get any response
-             */
-            port.write("------\n".getBytes(), 1000);
-            dleEot(port,1);
-            /*
-                 this time we will have reading timeout
-             */
-            dleEot(port,2);
-            port.write("------\n".getBytes(), 1000);
-            dleEot(port,3);
-            dleEot(port,4);
+
+            // reset automatic status
+//            cmd= new byte[3];
+//            cmd[0]=29;
+//            cmd[1]=97;
+//            cmd[2]=0;
+//
+//            port.write(cmd, 1000);
+
+
+//            dleEot(port,2);
+//            gsR(port,49);
+//            gsR(port,50);
+//            gsR(port,52);
+
+//            escV(port);
+
 
 
 
@@ -139,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
             cmd= new byte[3];
             cmd[0]=27;
             cmd[1]=33;
-            cmd[2]=16;
+            cmd[2]=16+BOLD;
             port.write(cmd, 1000);
 
 
@@ -149,10 +171,11 @@ public class MainActivity extends AppCompatActivity {
             }
             port.write(new byte[]{0x0a}, 1000);
 
+
             cmd= new byte[3];
             cmd[0]=27;
             cmd[1]=33;
-            cmd[2]=32;
+            cmd[2]=32+BOLD;
             port.write(cmd, 1000);
 
 
@@ -165,19 +188,22 @@ public class MainActivity extends AppCompatActivity {
             cmd= new byte[3];
             cmd[0]=27;
             cmd[1]=33;
-            cmd[2]=16+32;
+            cmd[2]=16+32+BOLD;
             port.write(cmd, 1000);
 
 
 
-            for (int i=0;i<rep;i++)
+            for (int i=0;i<rep;i++) {
+
+
                 port.write("double wh\n".getBytes(), 1000);
+            }
             port.write(new byte[]{0x0a}, 1000);
 
             cmd= new byte[3];
             cmd[0]=27;
             cmd[1]=33;
-            cmd[2]=0;
+            cmd[2]=BOLD;
             port.write(cmd, 1000);
 
             for (int i=0;i<rep;i++)
@@ -192,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
 
             port.write(new byte[]{0x0c}, 1000);
 
-        } catch (IOException e) {
+        } catch (IOException  e) {
             e.printStackTrace();
         } finally {
             connection.close();
@@ -248,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
                             try {
                                 doPrintRawUsbSerial();
-                                doPrintByUsbSerialPrinter();
+                                //doPrintByUsbSerialPrinter();
 
                             } catch (CommonException e) {
                                 e.printStackTrace();
@@ -279,7 +305,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+        Button button3= findViewById(R.id.ds_button);
+        button3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                readDS();
+            }
+        });
+
+
+
+
         printerTV= findViewById(R.id.textViewPrinter);
+        dsTV= findViewById(R.id.textViewDS);
 
 //        UsbManager manager = (UsbManager) getSystemService(USB_SERVICE);
 //
@@ -335,7 +373,14 @@ public class MainActivity extends AppCompatActivity {
         byte[] response = new byte[1];
         response[0]= (byte) 0xee;
 
-        int retLen = port.read(response, 1000);
+
+
+        int retLen = port.read(response, 5000);
+
+
+
+
+
 
 
         if (retLen >= 1) {
@@ -351,7 +396,93 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    printerTV.setText(printerTV.getText().toString() + "\n"+ "DLE EOT "+n+ ":" + "NO Answer ");
+                    printerTV.setText(printerTV.getText().toString() + "\n"+ "DLE EOT "+n+ ":" + "NO Answer "+ Integer.toHexString(response[0]));
+                }
+            });
+
+            Log.d("", "NO Answer "+Integer.toHexString(response[0]));
+
+        }
+    }
+
+    void gsR(UsbSerialPort port, int n) throws IOException {
+        byte[] cmd = new byte[3];
+        cmd[0] = 29;
+        cmd[1] = 114;
+        cmd[2] = (byte) n;
+        port.write(cmd, 1000);
+
+
+        byte[] response = new byte[1];
+        response[0]= (byte) 0xee;
+
+
+
+        int retLen = port.read(response, 5000);
+
+
+
+
+
+
+
+        if (retLen >= 1) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n" + "GS R "+n+ ": 0X"+Integer.toHexString(response[0]));
+                }
+            });
+            Log.d("", Integer.toHexString(response[0]));
+        }
+        else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n"+ "GS R "+n+ ":" + "NO Answer "+ Integer.toHexString(response[0]));
+                }
+            });
+
+            Log.d("", "NO Answer "+Integer.toHexString(response[0]));
+
+        }
+    }
+
+    void escV(UsbSerialPort port) throws IOException {
+        byte[] cmd = new byte[2];
+        cmd[0] = 27;
+        cmd[1] = 118;
+
+        port.write(cmd, 1000);
+
+
+        byte[] response = new byte[1];
+        response[0]= (byte) 0xee;
+
+
+
+        int retLen = port.read(response, 5000);
+
+
+
+
+
+
+
+        if (retLen >= 1) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n" + "ESC V "+ ": 0X"+Integer.toHexString(response[0]));
+                }
+            });
+            Log.d("", Integer.toHexString(response[0]));
+        }
+        else {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    printerTV.setText(printerTV.getText().toString() + "\n"+ "ESC V "+ ":" + "NO Answer "+ Integer.toHexString(response[0]));
                 }
             });
 
@@ -361,8 +492,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    void ds()
-    {
 
+    void readDS()
+    {
+        PowerControl powerControl = new PowerControl(this);
+       if ( powerControl.getDialSwitchStatus()==0)
+           dsTV.setText("OFF");
+       else
+           dsTV.setText("ON");
     }
 }
