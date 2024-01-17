@@ -6,7 +6,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.rch.telpoprinter"
+        applicationId 'com.rch.telpoprinter1'
         minSdk 27
         targetSdk 32
         versionCode 1

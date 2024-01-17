@@ -1,4 +1,4 @@
-package com.rch.telpoprinter;
+package com.rch.telpoprinter3;
 
 import org.junit.Test;
 
